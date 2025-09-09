@@ -1,5 +1,7 @@
 /**
  * Capitaliza uma string (primeira letra maiúscula, resto minúscula).
+ * @param {string} palavra A string a ser capitalizada.
+ * @returns {string} A string no formato "Capitalizado".
  */
 function capitalize(palavra) {
   if (!palavra) return "";
@@ -10,28 +12,72 @@ function capitalize(palavra) {
 
 /**
  * Verifica se uma pessoa possui todos os brinquedos favoritos de um animal,
- * respeitando a ordem e permitindo outros brinquedos no meio.
- * Esta função implementa as Regras 1 e 2.
+ * respeitando a ordem e permitindo outros brinquedos no meio (Regras 1 e 2).
+ * @param {string[]} brinquedosDoAnimal A lista de brinquedos do animal.
+ * @param {string[]} brinquedosDaPessoa A lista de brinquedos da pessoa.
+ * @returns {boolean} True se a pessoa tiver os brinquedos na ordem correta.
  */
 function temBrinquedosNaOrdem(brinquedosDoAnimal, brinquedosDaPessoa) {
   let indiceBrinquedoAnimal = 0;
   for (let i = 0; i < brinquedosDaPessoa.length; i++) {
-    // Se o brinquedo atual da pessoa é o que estamos procurando na lista do animal...
     if (brinquedosDaPessoa[i] === brinquedosDoAnimal[indiceBrinquedoAnimal]) {
-      // ...avançamos nosso ponteiro para o próximo brinquedo favorito.
       indiceBrinquedoAnimal++;
     }
-    // Se o ponteiro alcançou o tamanho da lista de favoritos, significa que encontramos todos.
     if (indiceBrinquedoAnimal === brinquedosDoAnimal.length) {
       return true;
     }
   }
-  // Se o loop terminar e não tivermos encontrado todos, a pessoa não é apta.
   return false;
 }
 
+/**
+ * Valida a lista de brinquedos de uma pessoa, checando se os brinquedos existem
+ * e se não há duplicatas na lista de entrada.
+ * @param {string[]} listaBrinquedos A lista de brinquedos da pessoa.
+ * @param {object[]} animaisDisponiveis A lista de todos os animais do abrigo.
+ * @returns {boolean} True se a lista de brinquedos for válida.
+ */
+function validarBrinquedos(listaBrinquedos, animaisDisponiveis) {
+  const todosBrinquedos = animaisDisponiveis.flatMap(
+    (animal) => animal.brinquedos
+  );
+  const setBrinquedos = new Set();
+  for (const brinquedo of listaBrinquedos) {
+    if (!todosBrinquedos.includes(brinquedo)) return false; // Brinquedo não existe
+    if (setBrinquedos.has(brinquedo)) return false; // Brinquedo duplicado
+    setBrinquedos.add(brinquedo);
+  }
+  return true;
+}
+
+/**
+ * Valida a lista de animais para adoção, checando se não há nomes duplicados.
+ * @param {string[]} ordemAnimais A lista de nomes de animais a serem processados.
+ * @returns {boolean} True se a lista de animais for válida.
+ */
+function validarAnimaisNaOrdem(ordemAnimais) {
+  const setAnimais = new Set();
+  for (const animal of ordemAnimais) {
+    if (setAnimais.has(animal)) return false;
+    setAnimais.add(animal);
+  }
+  return true;
+}
+
+/**
+ * Verifica se uma pessoa possui todos os brinquedos de um animal, sem se importar com a ordem.
+ * Usado para a regra especial do Loco.
+ * @param {string[]} brinquedosDoAnimal A lista de brinquedos do animal.
+ * @param {string[]} brinquedosDaPessoa A lista de brinquedos da pessoa.
+ * @returns {boolean} True se a pessoa tiver todos os brinquedos.
+ */
+function temTodosOsBrinquedos(brinquedosDoAnimal, brinquedosDaPessoa) {
+  return brinquedosDoAnimal.every((brinquedo) =>
+    brinquedosDaPessoa.includes(brinquedo)
+  );
+}
+
 class AbrigoAnimais {
-  // Base de dados fixa com os animais disponíveis para adoção.
   animaisDisponiveis = [
     { nome: "Rex", especie: "cão", brinquedos: ["RATO", "BOLA"] },
     { nome: "Mimi", especie: "gato", brinquedos: ["BOLA", "LASER"] },
@@ -42,36 +88,49 @@ class AbrigoAnimais {
     { nome: "Loco", especie: "jabuti", brinquedos: ["SKATE", "RATO"] },
   ];
 
-  encontraPessoas(brinquedosPessoa1Str, brinquedosPessoa2Str, ordemAnimaisStr) {
-    // Converte as strings de entrada em arrays, removendo espaços
-    // e padronizando para maiúsculas para evitar erros de comparação.
-    const listaBrinquedosPessoa1 = brinquedosPessoa1Str
+  encontraPessoas(brinquedosPessoa1, brinquedosPessoa2, ordemAnimais) {
+    const brinquedosPessoa1Str = brinquedosPessoa1;
+    const brinquedosPessoa2Str = brinquedosPessoa2;
+    const ordemAnimaisStr = ordemAnimais;
+
+    let listaBrinquedosPessoa1 = brinquedosPessoa1Str
       .split(",")
       .map((brinquedo) => brinquedo.trim().toUpperCase());
-    const listaBrinquedosPessoa2 = brinquedosPessoa2Str
+    let listaBrinquedosPessoa2 = brinquedosPessoa2Str
       .split(",")
       .map((brinquedo) => brinquedo.trim().toUpperCase());
     const nomesDosAnimaisParaAdocao = ordemAnimaisStr
       .split(",")
       .map((animal) => capitalize(animal.trim()));
 
-    // Armazena o resultado final do processamento.
+    if (
+      !validarBrinquedos(listaBrinquedosPessoa1, this.animaisDisponiveis) ||
+      !validarBrinquedos(listaBrinquedosPessoa2, this.animaisDisponiveis)
+    ) {
+      return { erro: "Brinquedo inválido" };
+    }
+    if (!validarAnimaisNaOrdem(nomesDosAnimaisParaAdocao)) {
+      return { erro: "Animal inválido" };
+    }
+
     const relatorioFinal = [];
-    // Controladores para a Regra 5: Limite de 3 adoções por pessoa.
     let contadorAdotadosPessoa1 = 0;
     let contadorAdotadosPessoa2 = 0;
 
+    // A lógica de adoção é feita em duas passagens para lidar com a regra especial do Loco,
+    // que depende do estado de adoção de outros animais.
+
+    // --- PASSAGEM 1: Processa todos os animais, exceto o Loco ---
     for (const nomeDoAnimal of nomesDosAnimaisParaAdocao) {
-      // Busca o objeto completo do animal na nossa base de dados.
+      if (nomeDoAnimal === "Loco") {
+        continue;
+      }
+
       const animalAtual = this.animaisDisponiveis.find(
         (animal) => animal.nome === nomeDoAnimal
       );
-
-      // Validação de entrada: Se o animal não existe, encerra com erro.
       if (!animalAtual) return { erro: "Animal inválido" };
 
-      // Verifica se cada pessoa cumpre os pré-requisitos para o animal atual.
-      // Combina a verificação de brinquedos (Regras 1 e 2) com o limite de adoção (Regra 5).
       const pessoa1PodeAdotar =
         temBrinquedosNaOrdem(animalAtual.brinquedos, listaBrinquedosPessoa1) &&
         contadorAdotadosPessoa1 < 3;
@@ -80,44 +139,70 @@ class AbrigoAnimais {
         contadorAdotadosPessoa2 < 3;
 
       let donoFinal;
-
-      // Bloco de decisão principal para determinar o destino do animal.
-      // Implementa a Regra 4: Em caso de empate, o animal fica no abrigo.
       if (pessoa1PodeAdotar && pessoa2PodeAdotar) {
         donoFinal = "abrigo";
       } else if (pessoa1PodeAdotar) {
         donoFinal = "pessoa 1";
-        contadorAdotadosPessoa1++; // Incrementa o contador da pessoa.
+        contadorAdotadosPessoa1++;
+        // Implementa a Regra 3: Gatos não dividem brinquedos.
+        if (animalAtual.especie === "gato") {
+          listaBrinquedosPessoa1 = listaBrinquedosPessoa1.filter(
+            (brinquedo) => !animalAtual.brinquedos.includes(brinquedo)
+          );
+        }
       } else if (pessoa2PodeAdotar) {
         donoFinal = "pessoa 2";
-        contadorAdotadosPessoa2++; // Incrementa o contador da pessoa.
+        contadorAdotadosPessoa2++;
+        // Implementa a Regra 3: Gatos não dividem brinquedos.
+        if (animalAtual.especie === "gato") {
+          listaBrinquedosPessoa2 = listaBrinquedosPessoa2.filter(
+            (brinquedo) => !animalAtual.brinquedos.includes(brinquedo)
+          );
+        }
       } else {
-        // Se ninguém pode adotar, ele também fica no abrigo.
         donoFinal = "abrigo";
       }
-
-      // Adiciona a string formatada ao relatório final.
       relatorioFinal.push(animalAtual.nome + " - " + donoFinal);
     }
 
-    // Retorna o objeto no formato esperado, com a lista de resultados ordenada alfabeticamente.
+    // --- PASSAGEM 2: Processa apenas o Loco, agora que os outros já foram definidos ---
+    for (const nomeDoAnimal of nomesDosAnimaisParaAdocao) {
+      if (nomeDoAnimal !== "Loco") {
+        continue;
+      }
+
+      const animalAtual = this.animaisDisponiveis.find(
+        (animal) => animal.nome === nomeDoAnimal
+      );
+      if (!animalAtual) return { erro: "Animal inválido" };
+
+      // Implementa a Regra 6: Loco precisa de companhia (contador > 0).
+      const pessoa1PodeAdotar =
+        contadorAdotadosPessoa1 > 0 &&
+        temTodosOsBrinquedos(animalAtual.brinquedos, listaBrinquedosPessoa1) &&
+        contadorAdotadosPessoa1 < 3;
+      const pessoa2PodeAdotar =
+        contadorAdotadosPessoa2 > 0 &&
+        temTodosOsBrinquedos(animalAtual.brinquedos, listaBrinquedosPessoa2) &&
+        contadorAdotadosPessoa2 < 3;
+
+      let donoFinal;
+      if (pessoa1PodeAdotar && pessoa2PodeAdotar) {
+        donoFinal = "abrigo";
+      } else if (pessoa1PodeAdotar) {
+        donoFinal = "pessoa 1";
+        contadorAdotadosPessoa1++;
+      } else if (pessoa2PodeAdotar) {
+        donoFinal = "pessoa 2";
+        contadorAdotadosPessoa2++;
+      } else {
+        donoFinal = "abrigo";
+      }
+      relatorioFinal.push(animalAtual.nome + " - " + donoFinal);
+    }
+
     return { lista: relatorioFinal.sort() };
   }
 }
-
-const abrigo = new AbrigoAnimais();
-const resultado1 = abrigo.encontraPessoas(
-  "RATO,BOLA", // brinquedos da pessoa 1
-  "RATO,NOVELO", // brinquedos da pessoa 2
-  "Rex,Fofo" // ordem dos animais
-);
-console.log(resultado1);
-
-const resultado2 = abrigo.encontraPessoas(
-  "BOLA,LASER", // pessoa 1
-  "BOLA,NOVELO,RATO,LASER", // pessoa 2
-  "Mimi,Fofo,Rex,Bola" // ordem dos animais
-);
-console.log(resultado2);
 
 export { AbrigoAnimais as AbrigoAnimais };
